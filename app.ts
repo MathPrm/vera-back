@@ -1,47 +1,38 @@
+// app.ts
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import db from './app/models';
 import authRoutes from './app/routes/auth.routes';
 
+// Charger les variables d'environnement
 dotenv.config();
 
+// Créer l'application Express
 const app: Application = express();
+const PORT = process.env.PORT || 3000;
 
-const clientOrigins = process.env.CLIENT_URL || "http://localhost:4200";
-
-const corsOptions: CorsOptions = {
-  origin: clientOrigins.split(','), 
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE']
-};
-
-app.use(cors(corsOptions));
+// Middleware
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:4200',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-db.sequelize
-  .sync()
-  .then(() => {
-    console.log("Base de données synchronisée.");
-  })
-  .catch((err: Error) => {
-    console.error("Erreur de synchronisation de la base de données:", err.message);
-
-// // Middleware
-// app.use(cors({
-//   origin: process.env.CLIENT_URL || 'http://localhost:4200',
-//   credentials: true
-// }));
-// app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
-
 // Routes
 app.use('/api/auth', authRoutes);
-app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "Bienvenue sur l'API Items. Le serveur fonctionne !" });
+
+// Route de base
+app.get('/', (req: Request, res: Response) => {
+  res.json({
+    message: 'API Vera Backend - MySQL & Sequelize',
+    status: 'En ligne',
+    version: '1.0.0'
+  });
 });
+
+// Route de test de connexion DB
 app.get('/api/health', async (req: Request, res: Response) => {
   try {
     await db.sequelize.authenticate();
@@ -59,7 +50,6 @@ app.get('/api/health', async (req: Request, res: Response) => {
     });
   }
 });
-itemRoutes(app);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
