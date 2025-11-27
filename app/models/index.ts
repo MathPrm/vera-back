@@ -31,6 +31,7 @@ if (dbUrl) {
   });
 
 } else {
+
   console.log("💻 Mode Local : Connexion à PostgreSQL sur le port", process.env.DB_PORT);
 
   sequelize = new Sequelize(
