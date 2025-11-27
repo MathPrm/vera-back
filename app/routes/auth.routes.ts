@@ -1,7 +1,7 @@
 // routes/auth.routes.ts
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
-import { verifyToken } from '../../middleware/auth.middleware';
+import { verifyToken, verifyAdmin } from '../../middleware/auth.middleware';
 
 const router = Router();
 
@@ -12,5 +12,13 @@ router.post('/login', AuthController.login);
 // Routes protégées
 router.get('/profile', verifyToken, AuthController.getProfile);
 router.put('/profile', verifyToken, AuthController.updateProfile);
+
+// Route admin (exemple - peut être utilisée pour vérifier l'accès admin)
+router.get('/admin-check', verifyAdmin, (req, res) => {
+  res.json({
+    success: true,
+    message: 'Accès admin autorisé'
+  });
+});
 
 export default router;

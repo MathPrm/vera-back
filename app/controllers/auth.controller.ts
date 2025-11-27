@@ -1,6 +1,7 @@
 // controllers/auth.controller.ts
 import { Request, Response } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
+import { QueryTypes } from 'sequelize';
 import db from '../models';
 import { UserCreationAttributes } from '../models/user.model';
 
@@ -12,6 +13,7 @@ const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '24h';
 interface JwtPayload {
   id: number;
   email: string;
+  is_admin: boolean;
 }
 
 export class AuthController {
@@ -88,8 +90,11 @@ export class AuthController {
         });
       }
 
-      // Trouver l'utilisateur
-      const user = await User.findOne({ where: { email } });
+      // Trouver l'utilisateur avec tous les attributs
+      const user = await User.findOne({ 
+        where: { email },
+        attributes: ['id', 'email', 'password', 'username', 'is_admin', 'createdAt', 'updatedAt']
+      });
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -106,27 +111,67 @@ export class AuthController {
         });
       }
 
-      // Créer le token JWT
+      // Récupérer is_admin directement depuis MySQL avec une requête SQL
+      // (car Sequelize peut ne pas avoir synchronisé la colonne ajoutée manuellement)
+      console.log('🔍 Fetching is_admin from database for user ID:', user.id);
+      const results = await db.sequelize.query(
+        'SELECT is_admin FROM users WHERE id = :userId',
+        {
+          replacements: { userId: user.id },
+          type: QueryTypes.SELECT
+        }
+      ) as any[];
+      
+      let rawIsAdmin: any = null;
+      if (results && results.length > 0) {
+        rawIsAdmin = results[0].is_admin;
+        console.log('✅ is_admin from SQL query:', rawIsAdmin, 'Type:', typeof rawIsAdmin);
+      } else {
+        console.log('⚠️ No result from SQL query for user ID:', user.id);
+        // Fallback: essayer avec Sequelize
+        const userData = user.toJSON();
+        rawIsAdmin = userData.is_admin || (user as any).getDataValue('is_admin') || user.is_admin;
+        console.log('🔍 Fallback - is_admin from Sequelize:', rawIsAdmin);
+      }
+      
+      // Conversion explicite : gérer tous les cas (1, 0, true, false)
+      // MySQL retourne 1/0 comme nombres pour les BOOLEAN
+      const isAdmin = rawIsAdmin === true || (rawIsAdmin as any) === 1 || Number(rawIsAdmin) === 1;
+      console.log('✅ Final isAdmin:', isAdmin, 'from raw value:', rawIsAdmin, 'Type:', typeof rawIsAdmin);
+
+      // Créer le token JWT avec is_admin inclus
       const payload: JwtPayload = {
         id: user.id,
-        email: user.email
+        email: user.email,
+        is_admin: isAdmin
       };
 
       const token = jwt.sign(payload, JWT_SECRET, {
         expiresIn: JWT_EXPIRES_IN
       } as SignOptions);
 
-      // Réponse
-      return res.json({
+      // Réponse - s'assurer que is_admin est bien inclus et explicite
+      const responseData = {
         success: true,
         message: 'Connexion réussie',
         token,
         user: {
           id: user.id,
           email: user.email,
-          username: user.username
+          username: user.username,
+          is_admin: isAdmin === true || (isAdmin as any) === 1 || Boolean(isAdmin)
         }
-      });
+      };
+      
+      // Vérification avant envoi
+      console.log('📤 Sending response with is_admin:', responseData.user.is_admin, 'Type:', typeof responseData.user.is_admin);
+      console.log('📤 Full response data:', JSON.stringify(responseData, null, 2));
+      console.log('📤 User object in response:', JSON.stringify(responseData.user, null, 2));
+      
+      // Envoyer la réponse
+      const sentResponse = res.json(responseData);
+      console.log('✅ Response sent successfully');
+      return sentResponse;
 
     } catch (error) {
       console.error('Erreur lors de la connexion:', error);

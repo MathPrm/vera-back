@@ -8,6 +8,7 @@ export interface UserAttributes {
   email: string;
   password: string;
   username: string;
+  is_admin?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -21,6 +22,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   public email!: string;
   public password!: string;
   public username!: string;
+  public is_admin!: boolean;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -68,6 +70,11 @@ export const UserModel = (sequelize: Sequelize): typeof User => {
       username: {
         type: DataTypes.STRING(100),
         allowNull: true
+      },
+      is_admin: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
       }
     },
     {
