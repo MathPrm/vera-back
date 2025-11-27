@@ -1,30 +1,56 @@
-import { Sequelize } from 'sequelize';
+import { Sequelize, Dialect } from 'sequelize';
 import dbConfig from '../config/db.config';
-import ItemModel from './item';
+import * as dotenv from 'dotenv';
 
-// 1. Initialisation de l'instance Sequelize avec les paramètres de config
-const sequelize = new Sequelize(
-  dbConfig.DB,
-  dbConfig.USER,
-  dbConfig.PASSWORD,
-  {
-    host: dbConfig.HOST,
-    dialect: dbConfig.dialect,
-    pool: {
-      max: dbConfig.pool.max,
-      min: dbConfig.pool.min,
-      acquire: dbConfig.pool.acquire,
-      idle: dbConfig.pool.idle
+dotenv.config();
+
+interface DbContext {
+  Sequelize: typeof Sequelize;
+  sequelize: Sequelize;
+  items?: any;
+}
+
+const dbUrl = process.env.DB_URL;
+
+let sequelize: Sequelize;
+
+if (dbUrl) {
+
+  console.log("🚀 Mode Production : Connexion à PostgreSQL via URL");
+  
+  sequelize = new Sequelize(dbUrl, {
+    dialect: 'postgres',
+    protocol: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
     },
-    logging: false // Mettre à console.log pour voir le SQL généré
-  }
-);
+    logging: false
+  });
 
-// 2. Construction de l'objet db
-const db = {
-  Sequelize, // La classe (utile pour les types/opérateurs statiques)
-  sequelize, // L'instance connectée
-  items: ItemModel(sequelize) // On initialise le modèle Item
+} else {
+  console.log("💻 Mode Local : Connexion à PostgreSQL sur le port", process.env.DB_PORT);
+
+  sequelize = new Sequelize(
+    process.env.DB_NAME as string,
+    process.env.DB_USER as string,
+    process.env.DB_PASSWORD as string,
+    {
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT) || 5432,
+      dialect: 'postgres',
+      logging: console.log
+    }
+  );
+}
+
+const db: DbContext = {
+  Sequelize: Sequelize,
+  sequelize: sequelize,
 };
+
+db.items = require("./item.ts").default(sequelize, Sequelize);
 
 export default db;

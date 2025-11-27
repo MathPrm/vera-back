@@ -1,19 +1,16 @@
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
-import db from '../models'; // Assurez-vous que cela pointe vers votre fichier d'index des modèles
+import db from '../models';
 
-// Récupération du modèle initialisé
 const Item = db.items;
 
-// Créer et sauvegarder un nouvel Item
 export const create = async (req: Request, res: Response): Promise<Response> => {
   try {
-    // Validation de la requête
+
     if (!req.body.name) {
       return res.status(400).json({ message: "Le champ 'name' est obligatoire." });
     }
 
-    // Création de l'objet
     const item = await Item.create({
       name: req.body.name,
       description: req.body.description || null
@@ -28,7 +25,6 @@ export const create = async (req: Request, res: Response): Promise<Response> => 
   }
 };
 
-// Récupérer tous les Items (avec ou sans filtre de recherche)
 export const findAll = async (req: Request, res: Response): Promise<Response> => {
   try {
     const search = req.query.search as string | undefined;
@@ -52,7 +48,6 @@ export const findAll = async (req: Request, res: Response): Promise<Response> =>
   }
 };
 
-// Trouver un Item par son ID
 export const findOne = async (req: Request, res: Response): Promise<Response> => {
   try {
     const id = req.params.id;
@@ -72,12 +67,10 @@ export const findOne = async (req: Request, res: Response): Promise<Response> =>
   }
 };
 
-// Mettre à jour un Item par son ID
 export const update = async (req: Request, res: Response): Promise<Response> => {
   try {
     const id = req.params.id;
 
-    // update retourne un tableau contenant le nombre de lignes affectées
     const [nbUpdated] = await Item.update(req.body, {
       where: { id: id }
     });
@@ -88,7 +81,6 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
       });
     }
 
-    // On récupère l'item mis à jour pour le renvoyer
     const updatedItem = await Item.findByPk(id);
     return res.status(200).json(updatedItem);
   } catch (error) {
@@ -99,10 +91,8 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
   }
 };
 
-// Supprimer un Item par son ID
 export const remove = async (req: Request, res: Response): Promise<Response> => {
-  // Note: j'ai renommé 'delete' en 'remove' car 'delete' est un mot clé réservé, 
-  // bien que cela soit permis comme nom de propriété, c'est plus propre en TS/JS d'éviter la confusion.
+
   try {
     const id = req.params.id;
 

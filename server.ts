@@ -8,15 +8,19 @@ dotenv.config();
 
 const app: Application = express();
 
+const clientOrigins = process.env.CLIENT_URL || "http://localhost:4200";
+
 const corsOptions: CorsOptions = {
-  origin: "http://localhost:4200"
+  origin: clientOrigins.split(','), 
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE']
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Synchronisation de la base de données
 db.sequelize
   .sync()
   .then(() => {
@@ -26,12 +30,10 @@ db.sequelize
     console.error("Erreur de synchronisation de la base de données:", err.message);
   });
 
-// Route simple de bienvenue
 app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "Bienvenue sur l'API Items." });
+  res.json({ message: "Bienvenue sur l'API Items. Le serveur fonctionne !" });
 });
 
-// Importation des routes (appel de la fonction exportée par défaut)
 itemRoutes(app);
 
 const PORT: number | string = process.env.PORT || 3000;

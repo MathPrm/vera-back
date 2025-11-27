@@ -15,14 +15,28 @@ export interface DbConfig {
     acquire: number;
     idle: number;
   };
+  port?: number;
 }
 
+const getEnv = (key: string): string => {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`⚠️ La variable d'environnement ${key} est manquante !`);
+  }
+  return value;
+};
+
 const dbConfig: DbConfig = {
-  HOST: process.env.DB_HOST || 'localhost',
-  USER: process.env.DB_USER || 'root',
+
+  HOST: getEnv('DB_HOST'),
+  USER: getEnv('DB_USER'),
   PASSWORD: process.env.DB_PASSWORD || '',
-  DB: process.env.DB_NAME || 'vera',
-  dialect: (process.env.DB_DIALECT as Dialect) || 'mysql',
+  DB: getEnv('DB_NAME'),
+  
+  dialect: (process.env.DB_DIALECT as Dialect) || 'postgres',
+
+  port: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined,
+
   pool: {
     max: Number(process.env.DB_POOL_MAX) || 5,
     min: Number(process.env.DB_POOL_MIN) || 0,
