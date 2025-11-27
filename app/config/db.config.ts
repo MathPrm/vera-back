@@ -19,10 +19,11 @@ export interface DbConfig {
 
 const dbConfig: DbConfig = {
   HOST: process.env.DB_HOST || 'localhost',
-  USER: process.env.DB_USER || 'root',
+  USER: process.env.DB_USER || 'postgres', // Souvent 'postgres' par défaut
   PASSWORD: process.env.DB_PASSWORD || '',
   DB: process.env.DB_NAME || 'vera',
-  dialect: (process.env.DB_DIALECT as Dialect) || 'mysql',
+  // CHANGEMENT ICI : On force postgres par défaut
+  dialect: (process.env.DB_DIALECT as Dialect) || 'postgres', 
   pool: {
     max: Number(process.env.DB_POOL_MAX) || 5,
     min: Number(process.env.DB_POOL_MIN) || 0,
