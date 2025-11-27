@@ -1,30 +1,28 @@
+// models/index.ts
 import { Sequelize } from 'sequelize';
 import dbConfig from '../config/db.config';
+import { UserModel } from './user.model';
 import ItemModel from './item';
 
-// 1. Initialisation de l'instance Sequelize avec les paramètres de config
+// Initialisation de Sequelize avec MySQL
 const sequelize = new Sequelize(
-  dbConfig.DB,
-  dbConfig.USER,
-  dbConfig.PASSWORD,
+  dbConfig.DB ?? 'vera',
+  dbConfig.USER ?? 'root',
+  dbConfig.PASSWORD ?? '',
   {
-    host: dbConfig.HOST,
+    host: dbConfig.HOST ?? 'localhost',
     dialect: dbConfig.dialect,
-    pool: {
-      max: dbConfig.pool.max,
-      min: dbConfig.pool.min,
-      acquire: dbConfig.pool.acquire,
-      idle: dbConfig.pool.idle
-    },
-    logging: false // Mettre à console.log pour voir le SQL généré
+    pool: dbConfig.pool,
+    logging: dbConfig.logging
   }
 );
 
-// 2. Construction de l'objet db
+// Initialisation des modèles
 const db = {
-  Sequelize, // La classe (utile pour les types/opérateurs statiques)
-  sequelize, // L'instance connectée
-  items: ItemModel(sequelize) // On initialise le modèle Item
+  Sequelize,
+  sequelize,
+  User: UserModel(sequelize),
+  Item: ItemModel(sequelize)
 };
 
 export default db;

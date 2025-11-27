@@ -3,7 +3,7 @@ import { Op } from 'sequelize';
 import db from '../models'; // Assurez-vous que cela pointe vers votre fichier d'index des modèles
 
 // Récupération du modèle initialisé
-const Item = db.items;
+const Item = db.Item;
 
 // Créer et sauvegarder un nouvel Item
 export const create = async (req: Request, res: Response): Promise<Response> => {
