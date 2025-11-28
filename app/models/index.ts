@@ -8,6 +8,7 @@ interface DbContext {
   Sequelize: typeof Sequelize;
   sequelize: Sequelize;
   items?: any;
+  User?: any;
 }
 
 const dbUrl = process.env.DATABASE_URL;
@@ -53,5 +54,6 @@ const db: DbContext = {
 };
 
 db.items = require("./item").default(sequelize, Sequelize);
+db.User = require("./user.model").default(sequelize);
 
 export default db;
