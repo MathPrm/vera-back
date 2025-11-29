@@ -3,7 +3,6 @@ import axios from 'axios';
 class InstagramService {
     constructor() {
         this.apiKey = process.env.RAPIDAPI_KEY;
-        // Utiliser Instagram Best Experience API
         this.apiHost = 'instagram-best-experience.p.rapidapi.com';
         
         this.client = axios.create({
@@ -16,21 +15,14 @@ class InstagramService {
         });
     }
     
-    /**
-     * Extraire un post Instagram par URL
-     */
     async extractPost(url) {
         try {
-            console.log(`📥 Extraction post Instagram : ${url}`);
-            
-            // Extraire le shortcode depuis l'URL
             const shortcode = this.extractShortcodeFromUrl(url);
             
             if (!shortcode) {
                 throw new Error('URL invalide - impossible d\'extraire le shortcode');
             }
             
-            // Utiliser l'endpoint "/post" qui accepte le shortcode
             const response = await this.client.get('/post', {
                 params: { shortcode: shortcode }
             });
@@ -42,8 +34,6 @@ class InstagramService {
             return this.normalizePostData(response.data, shortcode, url);
             
         } catch (error) {
-            console.error(`❌ Erreur extraction Instagram:`, error.message);
-            
             if (error.response) {
                 if (error.response.status === 404) {
                     throw new Error('Post Instagram introuvable ou privé');
@@ -57,11 +47,7 @@ class InstagramService {
         }
     }
     
-    /**
-     * Normaliser les données d'un post Instagram
-     */
     normalizePostData(postData, shortcode, url) {
-        // Adapter selon la structure de Instagram Best Experience API
         const caption = postData.caption?.text || postData.title || '';
         const isVideo = postData.media_type === 2 || postData.product_type === 'igtv' || postData.product_type === 'clips';
         
@@ -89,15 +75,7 @@ class InstagramService {
         };
     }
     
-    /**
-     * Extraire le shortcode depuis l'URL Instagram
-     */
     extractShortcodeFromUrl(url) {
-        // Formats supportés:
-        // https://www.instagram.com/p/SHORTCODE/
-        // https://www.instagram.com/reel/SHORTCODE/
-        // https://instagram.com/p/SHORTCODE/
-        
         const patterns = [
             /instagram\.com\/p\/([A-Za-z0-9_-]+)/,
             /instagram\.com\/reel\/([A-Za-z0-9_-]+)/,
@@ -114,27 +92,18 @@ class InstagramService {
         return null;
     }
     
-    /**
-     * Extraire les hashtags d'un texte
-     */
     extractHashtags(text) {
         const hashtagPattern = /#[\w\u00C0-\u017F]+/g;
         const matches = text.match(hashtagPattern) || [];
         return matches.map(tag => tag.substring(1));
     }
     
-    /**
-     * Extraire les mentions d'un texte
-     */
     extractMentions(text) {
         const mentionPattern = /@[\w\u00C0-\u017F.]+/g;
         const matches = text.match(mentionPattern) || [];
         return matches.map(mention => mention.substring(1));
     }
     
-    /**
-     * Vérifier si une URL est une URL Instagram
-     */
     isInstagramUrl(url) {
         return /instagram\.com\/(p|reel|tv)\//.test(url);
     }
