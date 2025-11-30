@@ -8,6 +8,7 @@ interface DbContext {
   Sequelize: typeof Sequelize;
   sequelize: Sequelize;
   items?: any;
+  surveyResponses?: any; 
 }
 
 const dbUrl = process.env.DATABASE_URL;
@@ -15,7 +16,6 @@ const dbUrl = process.env.DATABASE_URL;
 let sequelize: Sequelize;
 
 if (dbUrl) {
-
   console.log("🚀 Mode Production : Connexion à PostgreSQL via URL");
   
   sequelize = new Sequelize(dbUrl, {
@@ -31,7 +31,6 @@ if (dbUrl) {
   });
 
 } else {
-
   console.log("💻 Mode Local : Connexion à PostgreSQL sur le port", process.env.DB_PORT);
 
   sequelize = new Sequelize(
@@ -53,5 +52,6 @@ const db: DbContext = {
 };
 
 db.items = require("./item").default(sequelize, Sequelize);
+db.surveyResponses = require("./survey.model").default(sequelize);
 
 export default db;
