@@ -273,14 +273,17 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
     /**
      * Vérifier un message texte simple (pour le chat web)
      * @param {string} message - Question de l'utilisateur
+     * @param {string} conversationId - ID de conversation (non utilisé car Vera ne le supporte pas)
+     * @param {Array} conversationHistory - Historique des messages pour le contexte
+     * @param {Array} mediaUrls - URLs de médias à analyser
+     * @param {Object} imageFile - Fichier image uploadé
+     * @param {Object} videoFile - Fichier vidéo uploadé
      */
-    async checkContent(message, conversationId = null, conversationHistory = []) {
+    async checkContent(message, conversationId = null, conversationHistory = [], mediaUrls = [], imageFile = null, videoFile = null) {
         try {
             if (!this.apiKey || this.apiKey === 'your_vera_api_key_here') {
                 throw new Error('VERA_API_KEY non configurée');
             }
-
-            console.log(`🔍 Vérification Vera: "${message.substring(0, 100)}..."`);
 
             // Construire le contexte avec l'historique
             let contextualQuery = message;
@@ -291,7 +294,25 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
                 ).join('\n');
                 
                 contextualQuery = `Contexte de la conversation:\n${context}\n\nNouvelle question: ${message}`;
-                console.log('📜 Contexte ajouté:', lastMessages.length, 'messages');
+            }
+
+            // Ajouter les URLs de médias si présentes
+            if (mediaUrls.length > 0) {
+                contextualQuery += '\n\n📹 MÉDIAS À ANALYSER:\n';
+                mediaUrls.forEach((url, index) => {
+                    contextualQuery += `${index + 1}. ${url}\n`;
+                });
+                contextualQuery += '\n⚠️ Utilise tes outils (Video Deepfake Detection, Synthetic Image Detection, Image Forgery) pour analyser ces médias.';
+            }
+
+            // Si fichiers uploadés, indiquer leur présence
+            if (imageFile) {
+                contextualQuery += `\n\n🖼️ Image uploadée: ${imageFile.filename} (${(imageFile.size / 1024).toFixed(2)} KB)`;
+                contextualQuery += '\n⚠️ Note: L\'analyse de fichiers locaux nécessite une URL publique. Demande à l\'utilisateur de partager un lien.';
+            }
+            if (videoFile) {
+                contextualQuery += `\n\n🎬 Vidéo uploadée: ${videoFile.filename} (${(videoFile.size / 1024 / 1024).toFixed(2)} MB)`;
+                contextualQuery += '\n⚠️ Note: L\'analyse de fichiers locaux nécessite une URL publique. Demande à l\'utilisateur de partager un lien.';
             }
 
             // Payload simplifié avec contexte
@@ -301,8 +322,6 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
                 enable_tools: true
             };
 
-            console.log('📤 Envoi à Vera API:', JSON.stringify(payload, null, 2));
-
             const response = await this.client.post('/chat', payload, {
                 timeout: 60000 // 60 secondes pour les outils de fact-checking
             });
@@ -311,23 +330,12 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
                 throw new Error('Pas de réponse de l\'API Vera');
             }
 
-            console.log('📥 Réponse Vera:', response.data);
-            console.log('📋 Type de response.data:', typeof response.data);
-            console.log('📋 Clés de response.data:', Object.keys(response.data || {}));
-
             // Parser la réponse Vera
             const result = this.parseVeraResponse(response.data);
-            
-            console.log('✅ Résultat Vera:', {
-                status: result.status,
-                sourcesCount: result.sources?.length || 0,
-                conversationId: result.conversationId
-            });
 
             return result;
 
         } catch (error) {
-            console.error('❌ Erreur Vera API:', error.response?.data || error.message);
             return {
                 error: true,
                 message: error.message,
@@ -348,8 +356,6 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
         } else {
             response = data.response || data.answer || data.message || '';
         }
-        
-        console.log('📝 Réponse brute Vera:', response.substring(0, 200));
         
         // Détecter le statut
         let status = 'verified';
