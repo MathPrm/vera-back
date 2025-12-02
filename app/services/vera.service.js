@@ -1,9 +1,19 @@
 const axios = require('axios');
 
+// Importer les services de plateforme (ce sont des singletons)
+const tiktokService = require('./tiktok.service');
+const youtubeService = require('./youtube.service');
+const instagramService = require('./instagram.service');
+
 class VeraService {
     constructor() {
         this.apiKey = process.env.VERA_API_KEY;
         this.apiEndpoint = process.env.VERA_API_URL || 'https://feat-api-partner---api-ksrn3vjgma-od.a.run.app/api/v1';
+        
+        // Utiliser les services singleton
+        this.tiktokService = tiktokService;
+        this.youtubeService = youtubeService;
+        this.instagramService = instagramService;
         
         this.client = axios.create({
             baseURL: this.apiEndpoint,
@@ -271,6 +281,74 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
     }
     
     /**
+     * Détecter et extraire les données d'une URL de plateforme
+     */
+    async extractFromUrl(url) {
+        try {
+            // TikTok
+            if (url.includes('tiktok.com')) {
+                console.log('🎵 Détection TikTok');
+                const videoData = await this.tiktokService.extractVideo(url);
+                return { platform: 'tiktok', data: videoData };
+            }
+            
+            // YouTube
+            if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                console.log('▶️ Détection YouTube');
+                const videoData = await this.youtubeService.extractVideo(url);
+                return { platform: 'youtube', data: videoData };
+            }
+            
+            // Instagram
+            if (url.includes('instagram.com')) {
+                console.log('📸 Détection Instagram');
+                const videoData = await this.instagramService.extractPost(url);
+                return { platform: 'instagram', data: videoData };
+            }
+            
+            // URL d'image directe
+            if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                return {
+                    platform: 'image',
+                    data: {
+                        url: url,
+                        type: 'image',
+                        thumbnail_url: url
+                    }
+                };
+            }
+            
+            // URL de vidéo directe
+            if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
+                return {
+                    platform: 'video',
+                    data: {
+                        url: url,
+                        type: 'video',
+                        download_url: url
+                    }
+                };
+            }
+            
+            // URL générique (article, site web)
+            return {
+                platform: 'web',
+                data: {
+                    url: url,
+                    type: 'url'
+                }
+            };
+            
+        } catch (error) {
+            console.error('❌ Erreur extraction URL:', error.message);
+            return {
+                platform: 'unknown',
+                data: { url: url, error: error.message }
+            };
+        }
+    }
+    
+    /**
      * Vérifier un message texte simple (pour le chat web)
      * @param {string} message - Question de l'utilisateur
      * @param {string} conversationId - ID de conversation (non utilisé car Vera ne le supporte pas)
@@ -285,6 +363,74 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
                 throw new Error('VERA_API_KEY non configurée');
             }
 
+            // Extraire les données des URLs de médias (TikTok, YouTube, Instagram)
+            const extractedMedias = [];
+            if (mediaUrls.length > 0) {
+                console.log('🔍 Extraction des médias détectés...');
+                for (const url of mediaUrls) {
+                    const extracted = await this.extractFromUrl(url);
+                    extractedMedias.push(extracted);
+                }
+            }
+
+            // Si on a extrait des vidéos de plateformes, utiliser checkVideo
+            const platformVideos = extractedMedias.filter(m => 
+                ['tiktok', 'youtube', 'instagram'].includes(m.platform)
+            );
+            
+            if (platformVideos.length > 0) {
+                // Utiliser la logique complète du bot pour les vidéos de plateforme
+                console.log(`📹 Analyse de ${platformVideos.length} vidéo(s) de plateforme`);
+                const video = platformVideos[0];
+                
+                // WORKAROUND : Vera refuse d'analyser les URLs de médias
+                // On analyse le contexte textuel uniquement (description, titre, hashtags)
+                const videoData = video.data;
+                const contextQuery = `Analyse ce contenu ${video.platform.toUpperCase()} et vérifie les informations factuelles:
+
+📌 TITRE: ${videoData.title || 'Aucun titre'}
+📝 DESCRIPTION: ${videoData.description || 'Aucune description'}
+👤 AUTEUR: @${videoData.author || 'Inconnu'}
+🏷️ HASHTAGS: ${videoData.hashtags?.join(', ') || 'Aucun'}
+
+📊 POPULARITÉ:
+- ${(videoData.views || 0).toLocaleString()} vues
+- ${(videoData.likes || 0).toLocaleString()} likes
+- ${(videoData.comments || 0).toLocaleString()} commentaires
+
+🎯 TÂCHE:
+1. Vérifie si les claims dans le titre/description sont vrais ou faux
+2. Recherche des sources fiables sur le sujet
+3. Détecte la désinformation potentielle dans le texte
+4. Évalue la crédibilité de l'auteur si possible
+
+Note: L'analyse visuelle de la vidéo n'est pas disponible pour le moment.`;
+
+                const payload = {
+                    userId: `${video.platform}_chat_${Date.now()}`,
+                    query: contextQuery,
+                    metadata: {
+                        source: video.platform,
+                        content_id: videoData.video_id || videoData.post_id,
+                        author: videoData.author,
+                        url: videoData.url
+                    }
+                };
+
+                const response = await this.client.post('/chat', payload, {
+                    responseType: 'text',
+                    timeout: 120000
+                });
+
+                if (!response.data) {
+                    throw new Error('Pas de réponse de l\'API Vera');
+                }
+
+                const result = this.parseVeraResponse({ response: response.data }, videoData);
+                return result;
+            }
+
+            // Sinon, continuer avec la logique du chat simple
             // Construire le contexte avec l'historique
             let contextualQuery = message;
             if (conversationHistory.length > 0) {
@@ -296,13 +442,67 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
                 contextualQuery = `Contexte de la conversation:\n${context}\n\nNouvelle question: ${message}`;
             }
 
-            // Ajouter les URLs de médias si présentes
+            // Ajouter les URLs de médias si présentes avec format détaillé
             if (mediaUrls.length > 0) {
-                contextualQuery += '\n\n📹 MÉDIAS À ANALYSER:\n';
-                mediaUrls.forEach((url, index) => {
-                    contextualQuery += `${index + 1}. ${url}\n`;
-                });
-                contextualQuery += '\n⚠️ Utilise tes outils (Video Deepfake Detection, Synthetic Image Detection, Image Forgery) pour analyser ces médias.';
+                // Détecter le type de média par l'URL
+                const videoUrls = mediaUrls.filter(url => 
+                    url.includes('youtube.com') || 
+                    url.includes('youtu.be') || 
+                    url.includes('tiktok.com') || 
+                    url.includes('instagram.com') ||
+                    url.includes('.mp4') ||
+                    url.includes('.mov') ||
+                    url.includes('.avi')
+                );
+                
+                const imageUrls = mediaUrls.filter(url => 
+                    url.includes('.jpg') || 
+                    url.includes('.jpeg') || 
+                    url.includes('.png') || 
+                    url.includes('.gif') ||
+                    url.includes('.webp')
+                );
+                
+                const otherUrls = mediaUrls.filter(url => 
+                    !videoUrls.includes(url) && !imageUrls.includes(url)
+                );
+
+                contextualQuery += '\n\n';
+                
+                if (videoUrls.length > 0) {
+                    videoUrls.forEach((url, i) => {
+                        contextualQuery += `📹 VIDÉO ${i+1} À ANALYSER: ${url}\n`;
+                    });
+                }
+                
+                if (imageUrls.length > 0) {
+                    imageUrls.forEach((url, i) => {
+                        contextualQuery += `🖼️ IMAGE ${i+1} À ANALYSER: ${url}\n`;
+                    });
+                }
+                
+                if (otherUrls.length > 0) {
+                    otherUrls.forEach((url, i) => {
+                        contextualQuery += `🔗 LIEN ${i+1} À VÉRIFIER: ${url}\n`;
+                    });
+                }
+
+                contextualQuery += `\n⚠️ IMPORTANT: Utilise tes outils Vera.ai pour analyser ces médias:
+- Video Deepfake Detection → analyse les vidéos pour détecter les deepfakes
+- Synthetic Image Detection → détecte si les images sont générées par IA
+- Image Forgery and Localization → détecte les manipulations dans les images
+- Synthetic Speech Detection → analyse l'audio pour détecter les voix synthétiques
+- TruFor → analyse forensique complète des médias
+- Web Search → vérifie les informations sur le web
+
+🎯 ANALYSE REQUISE:
+1. Analyse chaque média avec tes outils appropriés
+2. Vérifie l'authenticité (deepfake, manipulation, IA)
+3. Vérifie les claims factuels dans le contenu
+4. Détecte la désinformation potentielle
+5. Fournis des sources fiables pour tes vérifications
+
+Réponds avec un verdict clair et des preuves de tes outils.`;
             }
 
             // Si fichiers uploadés, indiquer leur présence
@@ -315,15 +515,27 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
                 contextualQuery += '\n⚠️ Note: L\'analyse de fichiers locaux nécessite une URL publique. Demande à l\'utilisateur de partager un lien.';
             }
 
-            // Payload simplifié avec contexte
+            // Payload avec metadata (comme le bot TikTok)
             const payload = {
-                query: contextualQuery,
                 userId: `web-user-${Date.now()}`,
-                enable_tools: true
+                query: contextualQuery
             };
 
+            // Ajouter metadata si URLs présentes
+            if (mediaUrls.length > 0 || imageFile || videoFile) {
+                payload.metadata = {
+                    source: 'web_chat',
+                    media_urls: mediaUrls.map(url => ({
+                        type: url.includes('youtube') || url.includes('tiktok') || url.includes('.mp4') ? 'video' : 
+                              url.includes('.jpg') || url.includes('.png') ? 'image' : 'url',
+                        url: url
+                    }))
+                };
+            }
+
             const response = await this.client.post('/chat', payload, {
-                timeout: 60000 // 60 secondes pour les outils de fact-checking
+                responseType: 'text',  // Comme le bot TikTok
+                timeout: 120000 // 2 minutes pour l'analyse de médias
             });
 
             if (!response.data) {

@@ -5,10 +5,7 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 
-// Charger d'abord les variables d'environnement du bot (pour VERA_API_KEY)
-dotenv.config({ path: path.join(__dirname, '../tiktok-factchecker-bot/.env') });
-
-// Puis charger celles de vera-back (pour API_PORT, etc)
+// Charger les variables d'environnement
 dotenv.config();
 
 // Importer le service Vera local (avec checkContent)
