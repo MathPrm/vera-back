@@ -12,9 +12,6 @@ class TelegramBotService {
         this.isRunning = false;
     }
     
-    /**
-     * Démarrer le bot
-     */
     start() {
         if (!this.token) {
             throw new Error('TELEGRAM_BOT_TOKEN non configuré');
