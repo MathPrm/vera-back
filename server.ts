@@ -3,6 +3,8 @@ import express, { Application, Request, Response } from "express";
 import cors, { CorsOptions } from "cors";
 import db from "./app/models"; // Assure l'import de l'objet db depuis index.ts
 import itemRoutes from "./app/routes/items.routes";
+import verificationRoutes from "./app/routes/verifications.routes";
+import verifyRoutes from "./app/routes/verify.routes";
 
 dotenv.config();
 
@@ -27,7 +29,7 @@ db.sequelize
     console.log("Base de données synchronisée.");
   })
   .catch((err: Error) => {
-    console.error("Erreur de synchronisation de la base de données:", err.message);
+    console.error("Erreur de synchronisation de la base de données:", err);
   });
 
 app.get("/", (req: Request, res: Response) => {
@@ -35,6 +37,8 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 itemRoutes(app);
+verificationRoutes(app);
+verifyRoutes(app);
 
 const PORT: number | string = process.env.PORT || 3000;
 
