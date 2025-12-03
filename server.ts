@@ -13,8 +13,7 @@ import verifyRoutes from "./app/routes/verify.routes";
 import authRoutes from "./app/routes/auth.routes";
 import surveyRoutes from "./app/routes/survey.routes";
 import historyRoutes from "./app/routes/history.routes";
-
-const veraService = require(path.join(__dirname, 'app', 'services', 'vera.service'));
+import veraService from "./app/services/vera.service";
 
 interface VeraResult {
   summary?: string;
