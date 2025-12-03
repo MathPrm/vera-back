@@ -4,6 +4,10 @@ interface DbContext {
     sequelize: Sequelize;
     items?: any;
     verifications?: any;
+    User?: any;
+    surveyResponses?: any;
+    UserConversation?: any;
+    ConversationMessage?: any;
 }
 declare const db: DbContext;
 export default db;

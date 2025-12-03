@@ -1,6 +1,19 @@
-const { createClient } = require('@supabase/supabase-js');
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+interface Conversation {
+  id?: string;
+  user_id: string;
+  user_query: string;
+  vera_response: string;
+  embedding: number[];
+  metadata?: Record<string, any>;
+  created_at: string;
+  similarity?: number;
+}
 
 class VectorStoreService {
+  private supabase: SupabaseClient;
+
   constructor() {
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
       throw new Error('SUPABASE_URL et SUPABASE_KEY requis dans .env');
@@ -14,14 +27,20 @@ class VectorStoreService {
 
   /**
    * Stocke une conversation avec son embedding
-   * @param {string} userId - ID de l'utilisateur
-   * @param {string} userQuery - Question posée
-   * @param {string} veraResponse - Réponse de Vera
-   * @param {number[]} embedding - Vecteur d'embedding (768D pour Gemini)
-   * @param {object} metadata - Métadonnées additionnelles (optionnel)
-   * @returns {Promise<object>} - Conversation créée
+   * @param userId - ID de l'utilisateur
+   * @param userQuery - Question posée
+   * @param veraResponse - Réponse de Vera
+   * @param embedding - Vecteur d'embedding (768D pour Gemini)
+   * @param metadata - Métadonnées additionnelles (optionnel)
+   * @returns Conversation créée
    */
-  async storeConversation(userId, userQuery, veraResponse, embedding, metadata = {}) {
+  async storeConversation(
+    userId: string,
+    userQuery: string,
+    veraResponse: string,
+    embedding: number[],
+    metadata: Record<string, any> = {}
+  ): Promise<Conversation> {
     try {
       const { data, error } = await this.supabase
         .from('conversations')
@@ -38,9 +57,10 @@ class VectorStoreService {
         .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error('Aucune donnée retournée');
 
       return data[0];
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur stockage conversation:', error.message);
       throw new Error(`Échec stockage: ${error.message}`);
     }
@@ -48,16 +68,20 @@ class VectorStoreService {
 
   /**
    * Recherche les conversations similaires par similarité vectorielle
-   * @param {number[]} queryEmbedding - Vecteur de la requête actuelle
-   * @param {string} userId - ID utilisateur (optionnel, pour filtrer)
-   * @param {number} limit - Nombre de résultats (défaut: 5)
-   * @param {number} threshold - Seuil de similarité minimum (0-1, défaut: 0.7)
-   * @returns {Promise<Array>} - Conversations similaires triées par pertinence
+   * @param queryEmbedding - Vecteur de la requête actuelle
+   * @param userId - ID utilisateur (optionnel, pour filtrer)
+   * @param limit - Nombre de résultats (défaut: 5)
+   * @param threshold - Seuil de similarité minimum (0-1, défaut: 0.7)
+   * @returns Conversations similaires triées par pertinence
    */
-  async searchSimilarConversations(queryEmbedding, userId = null, limit = 5, threshold = 0.7) {
+  async searchSimilarConversations(
+    queryEmbedding: number[],
+    userId: string | null = null,
+    limit: number = 5,
+    threshold: number = 0.7
+  ): Promise<Conversation[]> {
     try {
       // Utilisation de la fonction RPC pour la recherche vectorielle
-      // Note: Cette fonction doit être créée dans Supabase (voir instructions SQL)
       let query = this.supabase.rpc('match_conversations', {
         query_embedding: queryEmbedding,
         match_threshold: threshold,
@@ -74,7 +98,7 @@ class VectorStoreService {
       if (error) throw error;
 
       return data || [];
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur recherche similaire:', error.message);
       throw new Error(`Échec recherche: ${error.message}`);
     }
@@ -82,11 +106,11 @@ class VectorStoreService {
 
   /**
    * Récupère l'historique complet d'un utilisateur
-   * @param {string} userId - ID utilisateur
-   * @param {number} limit - Nombre de conversations (défaut: 50)
-   * @returns {Promise<Array>} - Historique des conversations
+   * @param userId - ID utilisateur
+   * @param limit - Nombre de conversations (défaut: 50)
+   * @returns Historique des conversations
    */
-  async getUserHistory(userId, limit = 50) {
+  async getUserHistory(userId: string, limit: number = 50): Promise<Conversation[]> {
     try {
       const { data, error } = await this.supabase
         .from('conversations')
@@ -98,7 +122,7 @@ class VectorStoreService {
       if (error) throw error;
 
       return data || [];
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur récupération historique:', error.message);
       throw new Error(`Échec récupération: ${error.message}`);
     }
@@ -106,10 +130,10 @@ class VectorStoreService {
 
   /**
    * Supprime les anciennes conversations (nettoyage)
-   * @param {number} daysOld - Supprimer conversations plus vieilles que X jours
-   * @returns {Promise<number>} - Nombre de conversations supprimées
+   * @param daysOld - Supprimer conversations plus vieilles que X jours
+   * @returns Nombre de conversations supprimées
    */
-  async cleanOldConversations(daysOld = 90) {
+  async cleanOldConversations(daysOld: number = 90): Promise<number> {
     try {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
@@ -123,7 +147,7 @@ class VectorStoreService {
       if (error) throw error;
 
       return data ? data.length : 0;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur nettoyage conversations:', error.message);
       throw new Error(`Échec nettoyage: ${error.message}`);
     }
@@ -131,10 +155,10 @@ class VectorStoreService {
 
   /**
    * Récupère une conversation spécifique par ID
-   * @param {string} conversationId - ID de la conversation
-   * @returns {Promise<object>} - Conversation
+   * @param conversationId - ID de la conversation
+   * @returns Conversation
    */
-  async getConversation(conversationId) {
+  async getConversation(conversationId: string): Promise<Conversation> {
     try {
       const { data, error } = await this.supabase
         .from('conversations')
@@ -145,7 +169,7 @@ class VectorStoreService {
       if (error) throw error;
 
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur récupération conversation:', error.message);
       throw new Error(`Échec récupération: ${error.message}`);
     }
@@ -153,4 +177,4 @@ class VectorStoreService {
 }
 
 // Export singleton
-module.exports = new VectorStoreService();
+export default new VectorStoreService();

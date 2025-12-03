@@ -1,14 +1,24 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import axios from 'axios';
+
+type EmbeddingProvider = 'OPENAI' | 'GEMINI';
 
 class EmbeddingService {
+  private provider: EmbeddingProvider;
+  private disabled: boolean = false;
+  private dimensions: number;
+  private genAI?: GoogleGenerativeAI;
+  private model?: any;
+
   constructor() {
     // Déterminer le provider (OPENAI ou GEMINI)
-    this.provider = process.env.EMBEDDING_PROVIDER || 'OPENAI'; // Défaut: OpenAI
+    this.provider = (process.env.EMBEDDING_PROVIDER as EmbeddingProvider) || 'OPENAI';
     
     if (this.provider === 'OPENAI') {
       if (!process.env.OPENAI_API_KEY) {
         console.warn('⚠️ OPENAI_API_KEY non définie - Service d\'embedding désactivé');
         this.disabled = true;
+        this.dimensions = 0;
         return;
       }
       this.dimensions = 1536; // OpenAI text-embedding-ada-002
@@ -17,6 +27,7 @@ class EmbeddingService {
       if (!process.env.GEMINI_API_KEY) {
         console.warn('⚠️ GEMINI_API_KEY non définie - Service d\'embedding désactivé');
         this.disabled = true;
+        this.dimensions = 0;
         return;
       }
       this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -30,10 +41,10 @@ class EmbeddingService {
 
   /**
    * Génère un embedding vectoriel pour un texte donné
-   * @param {string} text - Le texte à convertir en vecteur
-   * @returns {Promise<number[]>} - Vecteur d'embeddings (1536D pour OpenAI, 768D pour Gemini)
+   * @param text - Le texte à convertir en vecteur
+   * @returns Vecteur d'embeddings (1536D pour OpenAI, 768D pour Gemini)
    */
-  async generateEmbedding(text) {
+  async generateEmbedding(text: string): Promise<number[]> {
     if (this.disabled) {
       console.warn('⚠️ Embedding Service désactivé - Retour d\'un vecteur vide');
       return [];
@@ -49,7 +60,7 @@ class EmbeddingService {
       } else {
         return await this.generateGeminiEmbedding(text);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur génération embedding:', error.message);
       throw new Error(`Échec génération embedding: ${error.message}`);
     }
@@ -58,9 +69,7 @@ class EmbeddingService {
   /**
    * Génère un embedding avec OpenAI
    */
-  async generateOpenAIEmbedding(text) {
-    const axios = require('axios');
-    
+  private async generateOpenAIEmbedding(text: string): Promise<number[]> {
     const response = await axios.post(
       'https://api.openai.com/v1/embeddings',
       {
@@ -81,17 +90,20 @@ class EmbeddingService {
   /**
    * Génère un embedding avec Gemini
    */
-  async generateGeminiEmbedding(text) {
+  private async generateGeminiEmbedding(text: string): Promise<number[]> {
+    if (!this.model) {
+      throw new Error('Modèle Gemini non initialisé');
+    }
     const result = await this.model.embedContent(text);
     return result.embedding.values;
   }
 
   /**
    * Génère des embeddings pour plusieurs textes en batch
-   * @param {string[]} texts - Tableau de textes
-   * @returns {Promise<number[][]>} - Tableau de vecteurs
+   * @param texts - Tableau de textes
+   * @returns Tableau de vecteurs
    */
-  async generateEmbeddings(texts) {
+  async generateEmbeddings(texts: string[]): Promise<number[][]> {
     if (!Array.isArray(texts)) {
       throw new Error('texts doit être un tableau');
     }
@@ -101,7 +113,7 @@ class EmbeddingService {
         texts.map(text => this.generateEmbedding(text))
       );
       return embeddings;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur génération embeddings batch:', error.message);
       throw error;
     }
@@ -109,15 +121,15 @@ class EmbeddingService {
 
   /**
    * Prépare le texte d'une conversation pour l'embedding
-   * @param {string} userQuery - Question de l'utilisateur
-   * @param {string} veraResponse - Réponse de Vera
-   * @returns {string} - Texte combiné optimisé pour l'embedding
+   * @param userQuery - Question de l'utilisateur
+   * @param veraResponse - Réponse de Vera
+   * @returns Texte combiné optimisé pour l'embedding
    */
-  prepareConversationText(userQuery, veraResponse) {
+  prepareConversationText(userQuery: string, veraResponse: string): string {
     // Combine query + réponse pour un embedding plus riche
     return `Question: ${userQuery}\n\nRéponse: ${veraResponse}`;
   }
 }
 
 // Export singleton
-module.exports = new EmbeddingService();
+export default new EmbeddingService();

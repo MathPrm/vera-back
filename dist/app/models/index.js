@@ -53,24 +53,13 @@ if (dbUrl) {
     });
 }
 else {
-    const dialect = (process.env.DB_DIALECT || 'postgres');
-    if (dialect === 'sqlite') {
-        console.log("💻 Mode Local : Connexion à SQLite");
-        sequelize = new sequelize_1.Sequelize({
-            dialect: 'sqlite',
-            storage: process.env.DB_STORAGE || './database.sqlite',
-            logging: console.log
-        });
-    }
-    else {
-        console.log("💻 Mode Local : Connexion à PostgreSQL sur le port", process.env.DB_PORT);
-        sequelize = new sequelize_1.Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
-            host: process.env.DB_HOST,
-            port: Number(process.env.DB_PORT) || 5432,
-            dialect: 'postgres',
-            logging: console.log
-        });
-    }
+    console.log("💻 Mode Local : Connexion à PostgreSQL sur le port", process.env.DB_PORT);
+    sequelize = new sequelize_1.Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
+        host: process.env.DB_HOST,
+        port: Number(process.env.DB_PORT) || 5432,
+        dialect: 'postgres',
+        logging: console.log
+    });
 }
 const db = {
     Sequelize: sequelize_1.Sequelize,
@@ -78,5 +67,14 @@ const db = {
 };
 db.items = require("./item").default(sequelize, sequelize_1.Sequelize);
 db.verifications = require("./verification").default(sequelize, sequelize_1.Sequelize);
+db.User = require("./user.model").default(sequelize);
+db.surveyResponses = require("./survey.model").default(sequelize);
+db.UserConversation = require("./user-conversation.model").default(sequelize);
+db.ConversationMessage = require("./conversation-message.model").default(sequelize);
+// Associations
+db.User.hasMany(db.UserConversation, { foreignKey: 'user_id', as: 'conversations' });
+db.UserConversation.belongsTo(db.User, { foreignKey: 'user_id', as: 'user' });
+db.UserConversation.hasMany(db.ConversationMessage, { foreignKey: 'conversation_id', as: 'messages' });
+db.ConversationMessage.belongsTo(db.UserConversation, { foreignKey: 'conversation_id', as: 'conversation' });
 exports.default = db;
 //# sourceMappingURL=index.js.map
