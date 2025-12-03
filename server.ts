@@ -12,82 +12,66 @@ dotenv.config();
 const app: Application = express();
 
 const clientOrigins = process.env.CLIENT_URL || "http://localhost:4200";
-const corsOptions: CorsOptions = {
-  origin: (origin, callback) => {
-    // En développement, accepter toutes les origines locales
-    if (process.env.NODE_ENV !== 'production') {
-      if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        return callback(null, true);
-      }
-    }
-    
-    // En production, vérifier les origines autorisées
-    if (!origin) {
-      return callback(null, true); // Permettre les requêtes sans origine
-    }
-    
-    const allowedOrigins = clientOrigins.split(',').map(url => url.trim());
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`[CORS] Origine non autorisée: ${origin}`);
-      callback(null, true); // En développement, accepter quand même
-    }
-  },
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+
+// Liste des origines autorisées pour Express et Socket.IO
+const allowedOrigins = clientOrigins.split(',').map(url => url.trim());
+
+// Configuration CORS pour Express
+const expressCorsOptions: CorsOptions = {
+    origin: (origin, callback) => {
+        // En développement local, autoriser toute origine locale et l'origine de dev par défaut
+        if (process.env.NODE_ENV !== 'production' && (!origin || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+            return callback(null, true);
+        }
+        
+        // En production, vérifier si l'origine est dans la liste autorisée
+        if (origin && allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.warn(`[CORS] Origine non autorisée: ${origin}`);
+            // Rejeter si l'origine n'est pas autorisée.
+            callback(new Error('Non autorisé par CORS'), false); 
+        }
+    },
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    optionsSuccessStatus: 204
 };
 
-// Middleware pour logger les requêtes (développement uniquement)
-if (process.env.NODE_ENV !== 'production') {
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    console.log(`[${req.method}] ${req.path} - Origin: ${req.headers.origin || 'none'}`);
-    next();
-  });
-}
-
-// Appliquer CORS AVANT tout autre middleware
-app.use(cors(corsOptions));
-
-// Middleware manuel pour gérer les requêtes OPTIONS (fallback)
-app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    return res.status(204).send();
-  }
-  next();
-});
+// Appliquer CORS AVANT tout autre middleware Express
+app.use(cors(expressCorsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: corsOptions });
+
+// Configuration CORS pour Socket.IO (utilise la liste des origines autorisées)
+const io = new Server(httpServer, { 
+    cors: {
+        origin: allowedOrigins,
+        methods: ['GET', 'POST'],
+        credentials: true
+    }
+});
 
 io.on('connection', (socket) => {
-  console.log('🔌 Un client est connecté au Socket : ' + socket.id);
-  socket.on('disconnect', () => { console.log('Client déconnecté'); });
+    console.log('🔌 Un client est connecté au Socket : ' + socket.id);
+    socket.on('disconnect', () => { console.log('Client déconnecté'); });
 });
 
 db.sequelize
-
-  .sync({ alter: true }) 
-  .then(() => {
-    console.log("✅ Base de données synchronisée.");
-  })
-  .catch((err: Error) => {
-    console.error("❌ Erreur de synchronisation de la base de données:", err.message);
-  });
-
+    .sync({ alter: true }) 
+    .then(() => {
+        console.log("✅ Base de données synchronisée.");
+    })
+    .catch((err: Error) => {
+        console.error("❌ Erreur de synchronisation de la base de données:", err.message);
+    });
 
 app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "API Vera opérationnelle." });
+    res.json({ message: "API Vera opérationnelle." });
 });
 
 itemRoutes(app);
@@ -95,26 +79,26 @@ app.use('/api/auth', authRoutes);
 surveyRoutes(app); 
 
 app.post('/api/webhook/form', async (req: Request, res: Response) => {
-  try {
-    const rawData = req.body;
-    console.log('🔔 Webhook reçu.');
+    try {
+        const rawData = req.body;
+        console.log('🔔 Webhook reçu.');
 
-    const newResponseData = {
-      content: rawData,
-      date: new Date()
-    };
+        const newResponseData = {
+            content: rawData,
+            date: new Date()
+        };
 
-    const savedResponse = await db.surveyResponses.create(newResponseData);
-    console.log("✅ Donnée sauvegardée (JSON) ID :", savedResponse.id);
+        const savedResponse = await db.surveyResponses.create(newResponseData);
+        console.log("✅ Donnée sauvegardée (JSON) ID :", savedResponse.id);
 
-    io.emit('new-form-response', savedResponse);
+        io.emit('new-form-response', savedResponse);
 
-    res.status(200).send({ message: 'Sauvegardé' });
+        res.status(200).send({ message: 'Sauvegardé' });
 
-  } catch (error: any) {
-    console.error("❌ Erreur de sauvegarde :", error.message);
-    res.status(500).send({ error: error.message });
-  }
+    } catch (error: any) {
+        console.error("❌ Erreur de sauvegarde :", error.message);
+        res.status(500).send({ error: error.message });
+    }
 });
 
 const PORT: number | string = process.env.PORT || 3000;
