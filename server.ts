@@ -5,21 +5,13 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import db from "./app/models"; 
 import itemRoutes from "./app/routes/items.routes";
-<<<<<<< HEAD
 import authRoutes from "./app/routes/auth.routes";
-=======
 import surveyRoutes from "./app/routes/survey.routes"; 
->>>>>>> dashboard-google-form
 
 dotenv.config();
 const app: Application = express();
 
 const clientOrigins = process.env.CLIENT_URL || "http://localhost:4200";
-<<<<<<< HEAD
-
-// Configuration CORS simplifiée et robuste
-=======
->>>>>>> dashboard-google-form
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     // En développement, accepter toutes les origines locales
@@ -48,7 +40,6 @@ const corsOptions: CorsOptions = {
   preflightContinue: false,
   optionsSuccessStatus: 204
 };
-<<<<<<< HEAD
 
 // Middleware pour logger les requêtes (développement uniquement)
 if (process.env.NODE_ENV !== 'production') {
@@ -59,8 +50,6 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Appliquer CORS AVANT tout autre middleware
-=======
->>>>>>> dashboard-google-form
 app.use(cors(corsOptions));
 
 // Middleware manuel pour gérer les requêtes OPTIONS (fallback)
@@ -90,17 +79,10 @@ db.sequelize
 
   .sync({ alter: true }) 
   .then(() => {
-<<<<<<< HEAD
     console.log("✅ Base de données synchronisée.");
   })
   .catch((err: Error) => {
     console.error("❌ Erreur de synchronisation de la base de données:", err.message);
-=======
-    console.log("Base de données synchronisée (Structure mise à jour).");
-  })
-  .catch((err: Error) => {
-    console.error("Erreur de synchronisation :", err.message);
->>>>>>> dashboard-google-form
   });
 
 
@@ -109,9 +91,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 itemRoutes(app);
-<<<<<<< HEAD
 app.use('/api/auth', authRoutes);
-=======
 surveyRoutes(app); 
 
 app.post('/api/webhook/form', async (req: Request, res: Response) => {
@@ -136,7 +116,6 @@ app.post('/api/webhook/form', async (req: Request, res: Response) => {
     res.status(500).send({ error: error.message });
   }
 });
->>>>>>> dashboard-google-form
 
 const PORT: number | string = process.env.PORT || 3000;
 httpServer.listen(PORT, () => { console.log(`Serveur démarré sur le port ${PORT}.`); });
