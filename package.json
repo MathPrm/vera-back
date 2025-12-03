@@ -9,6 +9,8 @@
     "start": "node dist/server.js",
     "// COMMENTAIRE_2": "--- Commandes pour ton PC (Local) ---",
     "dev": "ts-node server.ts",
+    "api": "node api-server.js",
+    "dev:api": "nodemon api-server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,22 +18,27 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.86.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.1",
+    "axios": "^1.7.7",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.7",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
+    "@types/multer": "^2.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
