@@ -9,6 +9,8 @@ interface DbContext {
   sequelize: Sequelize;
   items?: any;
   verifications?: any;
+  User?: any;
+  surveyResponses?: any;
 }
 
 const dbUrl = process.env.DATABASE_URL;
@@ -16,7 +18,6 @@ const dbUrl = process.env.DATABASE_URL;
 let sequelize: Sequelize;
 
 if (dbUrl) {
-
   console.log("🚀 Mode Production : Connexion à PostgreSQL via URL");
   
   sequelize = new Sequelize(dbUrl, {
@@ -32,30 +33,19 @@ if (dbUrl) {
   });
 
 } else {
+  console.log("💻 Mode Local : Connexion à PostgreSQL sur le port", process.env.DB_PORT);
 
-  const dialect = (process.env.DB_DIALECT || 'postgres') as Dialect;
-  
-  if (dialect === 'sqlite') {
-    console.log("💻 Mode Local : Connexion à SQLite");
-    sequelize = new Sequelize({
-      dialect: 'sqlite',
-      storage: process.env.DB_STORAGE || './database.sqlite',
+  sequelize = new Sequelize(
+    process.env.DB_NAME as string,
+    process.env.DB_USER as string,
+    process.env.DB_PASSWORD as string,
+    {
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT) || 5432,
+      dialect: 'postgres',
       logging: console.log
-    });
-  } else {
-    console.log("💻 Mode Local : Connexion à PostgreSQL sur le port", process.env.DB_PORT);
-    sequelize = new Sequelize(
-      process.env.DB_NAME as string,
-      process.env.DB_USER as string,
-      process.env.DB_PASSWORD as string,
-      {
-        host: process.env.DB_HOST,
-        port: Number(process.env.DB_PORT) || 5432,
-        dialect: 'postgres',
-        logging: console.log
-      }
-    );
-  }
+    }
+  );
 }
 
 const db: DbContext = {
@@ -65,5 +55,7 @@ const db: DbContext = {
 
 db.items = require("./item").default(sequelize, Sequelize);
 db.verifications = require("./verification").default(sequelize, Sequelize);
+db.User = require("./user.model").default(sequelize);
+db.surveyResponses = require("./survey.model").default(sequelize);
 
 export default db;
