@@ -19,17 +19,23 @@ const allowedOrigins = clientOrigins.split(',').map(url => url.trim());
 // Configuration CORS pour Express
 const expressCorsOptions: CorsOptions = {
     origin: (origin, callback) => {
-        // En développement local, autoriser toute origine locale et l'origine de dev par défaut
-        if (process.env.NODE_ENV !== 'production' && (!origin || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+        
+        // Autoriser les requêtes sans en-tête Origin (health checks, outils, etc.)
+        if (!origin) {
+            return callback(null, true);
+        }
+        
+        // En développement local, autoriser toute origine locale
+        if (process.env.NODE_ENV !== 'production' && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
             return callback(null, true);
         }
         
         // En production, vérifier si l'origine est dans la liste autorisée
-        if (origin && allowedOrigins.includes(origin)) {
+        if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
             console.warn(`[CORS] Origine non autorisée: ${origin}`);
-            // Rejeter si l'origine n'est pas autorisée.
+            // Rejeter si l'origine n'est PAS autorisée.
             callback(new Error('Non autorisé par CORS'), false); 
         }
     },
