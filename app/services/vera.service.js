@@ -5,6 +5,10 @@ const tiktokService = require('./tiktok.service');
 const youtubeService = require('./youtube.service');
 const instagramService = require('./instagram.service');
 
+// Importer les services RAG
+const embeddingService = require('./embedding.service');
+const vectorStoreService = require('./vector-store.service');
+
 class VeraService {
     constructor() {
         this.apiKey = process.env.VERA_API_KEY;
@@ -363,6 +367,43 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
                 throw new Error('VERA_API_KEY non configurée');
             }
 
+            // ==============================
+            // ÉTAPE 1: RAG - RECHERCHE DE MÉMOIRE (DÉSACTIVÉ)
+            // ==============================
+            // RAG temporairement désactivé (quota API embeddings dépassé)
+            let similarConversations = [];
+            let ragContext = '';
+            
+            // Décommenter pour réactiver le RAG:
+            /*
+            try {
+                const queryEmbedding = await embeddingService.generateEmbedding(message);
+                const userId = conversationId || `web-user-${Date.now()}`;
+                similarConversations = await vectorStoreService.searchSimilarConversations(
+                    queryEmbedding,
+                    null,
+                    3,
+                    0.75
+                );
+                
+                if (similarConversations.length > 0) {
+                    console.log(`🧠 RAG: ${similarConversations.length} conversations similaires trouvées`);
+                    ragContext = '\n\n💾 MÉMOIRE (conversations similaires passées):\n';
+                    similarConversations.forEach((conv, i) => {
+                        ragContext += `\n[${i+1}] Similarité: ${(conv.similarity * 100).toFixed(1)}%\n`;
+                        ragContext += `Q: ${conv.user_query}\n`;
+                        ragContext += `R: ${conv.vera_response.substring(0, 200)}...\n`;
+                    });
+                    ragContext += '\n⚠️ Utilise ces conversations passées pour enrichir ta réponse si pertinent.\n';
+                }
+            } catch (ragError) {
+                console.warn('⚠️ RAG non disponible:', ragError.message);
+            }
+            */
+
+            // ==============================
+            // ÉTAPE 2: EXTRACTION DES MÉDIAS
+            // ==============================
             // Extraire les données des URLs de médias (TikTok, YouTube, Instagram)
             const extractedMedias = [];
             if (mediaUrls.length > 0) {
@@ -440,6 +481,11 @@ Note: L'analyse visuelle de la vidéo n'est pas disponible pour le moment.`;
                 ).join('\n');
                 
                 contextualQuery = `Contexte de la conversation:\n${context}\n\nNouvelle question: ${message}`;
+            }
+            
+            // Ajouter le contexte RAG s'il existe
+            if (ragContext) {
+                contextualQuery += ragContext;
             }
 
             // Ajouter les URLs de médias si présentes avec format détaillé
@@ -544,6 +590,39 @@ Réponds avec un verdict clair et des preuves de tes outils.`;
 
             // Parser la réponse Vera
             const result = this.parseVeraResponse(response.data);
+
+            // ==============================
+            // ÉTAPE 3: RAG - STOCKAGE (DÉSACTIVÉ)
+            // ==============================
+            // Stockage RAG temporairement désactivé (quota embeddings dépassé)
+            
+            // Décommenter pour réactiver le stockage:
+            /*
+            try {
+                const userId = conversationId || `web-user-${Date.now()}`;
+                const veraResponseText = typeof result === 'string' ? result : 
+                                        result.summary || result.message || JSON.stringify(result);
+                const conversationText = embeddingService.prepareConversationText(message, veraResponseText);
+                const conversationEmbedding = await embeddingService.generateEmbedding(conversationText);
+                
+                await vectorStoreService.storeConversation(
+                    userId,
+                    message,
+                    veraResponseText,
+                    conversationEmbedding,
+                    {
+                        media_urls: mediaUrls,
+                        has_files: !!(imageFile || videoFile),
+                        platform_videos: extractedMedias.length,
+                        similar_conversations_used: similarConversations.length
+                    }
+                );
+                
+                console.log('✅ Conversation stockée dans la mémoire RAG');
+            } catch (storageError) {
+                console.warn('⚠️ Stockage RAG échoué:', storageError.message);
+            }
+            */
 
             return result;
 

@@ -122,6 +122,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Routes pour la mémoire RAG
+const memoryRoutes = require('./app/routes/memory.routes');
+app.use('/api/memory', memoryRoutes);
+
 function formatResponse(result) {
   if (!result || result.error) {
     return {
