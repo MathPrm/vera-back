@@ -370,11 +370,21 @@ Et explique ton raisonnement avec les preuves de tes outils.`;
             // ==============================
             // ÉTAPE 1: RAG - RECHERCHE DE MÉMOIRE (DÉSACTIVÉ)
             // ==============================
-            // RAG temporairement désactivé (quota API embeddings dépassé)
+            // RAISON: Quota API Gemini Embeddings épuisé
+            // L'API gratuite Gemini a des limites strictes:
+            // - 1500 requêtes/jour (free tier)
+            // - 100 requêtes/minute
+            // Les quotas se réinitialisent après 24h
+            // 
+            // SOLUTIONS:
+            // 1. Activer facturation Google Cloud pour augmenter quotas
+            // 2. Attendre réinitialisation quotas (24h)
+            // 3. Utiliser provider alternatif (OpenAI avec OPENAI_API_KEY)
+            // 
+            // Le système fonctionne normalement sans RAG (fallback gracieux)
             let similarConversations = [];
             let ragContext = '';
             
-            // Décommenter pour réactiver le RAG:
             /*
             try {
                 const queryEmbedding = await embeddingService.generateEmbedding(message);
@@ -594,9 +604,9 @@ Réponds avec un verdict clair et des preuves de tes outils.`;
             // ==============================
             // ÉTAPE 3: RAG - STOCKAGE (DÉSACTIVÉ)
             // ==============================
-            // Stockage RAG temporairement désactivé (quota embeddings dépassé)
+            // Stockage désactivé - Quota Gemini Embeddings épuisé
+            // Voir commentaires ÉTAPE 1 pour solutions
             
-            // Décommenter pour réactiver le stockage:
             /*
             try {
                 const userId = conversationId || `web-user-${Date.now()}`;

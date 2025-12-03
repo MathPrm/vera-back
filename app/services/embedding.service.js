@@ -7,13 +7,17 @@ class EmbeddingService {
     
     if (this.provider === 'OPENAI') {
       if (!process.env.OPENAI_API_KEY) {
-        throw new Error('OPENAI_API_KEY non définie dans .env');
+        console.warn('⚠️ OPENAI_API_KEY non définie - Service d\'embedding désactivé');
+        this.disabled = true;
+        return;
       }
       this.dimensions = 1536; // OpenAI text-embedding-ada-002
       console.log('🤖 Embedding Service: OpenAI (1536D)');
     } else if (this.provider === 'GEMINI') {
       if (!process.env.GEMINI_API_KEY) {
-        throw new Error('GEMINI_API_KEY non définie dans .env');
+        console.warn('⚠️ GEMINI_API_KEY non définie - Service d\'embedding désactivé');
+        this.disabled = true;
+        return;
       }
       this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       this.model = this.genAI.getGenerativeModel({ model: 'embedding-001' });
@@ -30,6 +34,11 @@ class EmbeddingService {
    * @returns {Promise<number[]>} - Vecteur d'embeddings (1536D pour OpenAI, 768D pour Gemini)
    */
   async generateEmbedding(text) {
+    if (this.disabled) {
+      console.warn('⚠️ Embedding Service désactivé - Retour d\'un vecteur vide');
+      return [];
+    }
+
     if (!text || typeof text !== 'string') {
       throw new Error('Le texte doit être une chaîne non vide');
     }

@@ -11,6 +11,8 @@ interface DbContext {
   verifications?: any;
   User?: any;
   surveyResponses?: any;
+  UserConversation?: any;
+  ConversationMessage?: any;
 }
 
 const dbUrl = process.env.DATABASE_URL;
@@ -57,5 +59,14 @@ db.items = require("./item").default(sequelize, Sequelize);
 db.verifications = require("./verification").default(sequelize, Sequelize);
 db.User = require("./user.model").default(sequelize);
 db.surveyResponses = require("./survey.model").default(sequelize);
+db.UserConversation = require("./user-conversation.model").default(sequelize);
+db.ConversationMessage = require("./conversation-message.model").default(sequelize);
+
+// Associations
+db.User.hasMany(db.UserConversation, { foreignKey: 'user_id', as: 'conversations' });
+db.UserConversation.belongsTo(db.User, { foreignKey: 'user_id', as: 'user' });
+
+db.UserConversation.hasMany(db.ConversationMessage, { foreignKey: 'conversation_id', as: 'messages' });
+db.ConversationMessage.belongsTo(db.UserConversation, { foreignKey: 'conversation_id', as: 'conversation' });
 
 export default db;
