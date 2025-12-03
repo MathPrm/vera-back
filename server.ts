@@ -1,17 +1,25 @@
 import dotenv from "dotenv";
 import express, { Application, Request, Response, NextFunction } from "express";
 import cors, { CorsOptions } from "cors";
-import db from "./app/models"; // Assure l'import de l'objet db depuis index.ts
+import { createServer } from "http";
+import { Server } from "socket.io";
+import db from "./app/models"; 
 import itemRoutes from "./app/routes/items.routes";
+<<<<<<< HEAD
 import authRoutes from "./app/routes/auth.routes";
+=======
+import surveyRoutes from "./app/routes/survey.routes"; 
+>>>>>>> dashboard-google-form
 
 dotenv.config();
-
 const app: Application = express();
 
 const clientOrigins = process.env.CLIENT_URL || "http://localhost:4200";
+<<<<<<< HEAD
 
 // Configuration CORS simplifiée et robuste
+=======
+>>>>>>> dashboard-google-form
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     // En développement, accepter toutes les origines locales
@@ -40,6 +48,7 @@ const corsOptions: CorsOptions = {
   preflightContinue: false,
   optionsSuccessStatus: 204
 };
+<<<<<<< HEAD
 
 // Middleware pour logger les requêtes (développement uniquement)
 if (process.env.NODE_ENV !== 'production') {
@@ -50,6 +59,8 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Appliquer CORS AVANT tout autre middleware
+=======
+>>>>>>> dashboard-google-form
 app.use(cors(corsOptions));
 
 // Middleware manuel pour gérer les requêtes OPTIONS (fallback)
@@ -67,24 +78,65 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const httpServer = createServer(app);
+const io = new Server(httpServer, { cors: corsOptions });
+
+io.on('connection', (socket) => {
+  console.log('🔌 Un client est connecté au Socket : ' + socket.id);
+  socket.on('disconnect', () => { console.log('Client déconnecté'); });
+});
+
 db.sequelize
-  .sync()
+
+  .sync({ alter: true }) 
   .then(() => {
+<<<<<<< HEAD
     console.log("✅ Base de données synchronisée.");
   })
   .catch((err: Error) => {
     console.error("❌ Erreur de synchronisation de la base de données:", err.message);
+=======
+    console.log("Base de données synchronisée (Structure mise à jour).");
+  })
+  .catch((err: Error) => {
+    console.error("Erreur de synchronisation :", err.message);
+>>>>>>> dashboard-google-form
   });
 
+
 app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "Bienvenue sur l'API Items. Le serveur fonctionne !" });
+  res.json({ message: "API Vera opérationnelle." });
 });
 
 itemRoutes(app);
+<<<<<<< HEAD
 app.use('/api/auth', authRoutes);
+=======
+surveyRoutes(app); 
+
+app.post('/api/webhook/form', async (req: Request, res: Response) => {
+  try {
+    const rawData = req.body;
+    console.log('🔔 Webhook reçu.');
+
+    const newResponseData = {
+      content: rawData,
+      date: new Date()
+    };
+
+    const savedResponse = await db.surveyResponses.create(newResponseData);
+    console.log("✅ Donnée sauvegardée (JSON) ID :", savedResponse.id);
+
+    io.emit('new-form-response', savedResponse);
+
+    res.status(200).send({ message: 'Sauvegardé' });
+
+  } catch (error: any) {
+    console.error("❌ Erreur de sauvegarde :", error.message);
+    res.status(500).send({ error: error.message });
+  }
+});
+>>>>>>> dashboard-google-form
 
 const PORT: number | string = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`Serveur démarré sur le port ${PORT}.`);
-});
+httpServer.listen(PORT, () => { console.log(`Serveur démarré sur le port ${PORT}.`); });
