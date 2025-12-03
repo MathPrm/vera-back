@@ -1,0 +1,109 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.remove = exports.update = exports.findOne = exports.findAll = exports.create = void 0;
+const sequelize_1 = require("sequelize");
+const models_1 = __importDefault(require("../models"));
+const Item = models_1.default.items;
+const create = async (req, res) => {
+    try {
+        if (!req.body.name) {
+            return res.status(400).json({ message: "Le champ 'name' est obligatoire." });
+        }
+        const item = await Item.create({
+            name: req.body.name,
+            description: req.body.description || null
+        });
+        return res.status(201).json(item);
+    }
+    catch (error) {
+        console.error("Erreur create item:", error);
+        return res.status(500).json({
+            message: error instanceof Error ? error.message : "Erreur lors de la création de l'item."
+        });
+    }
+};
+exports.create = create;
+const findAll = async (req, res) => {
+    try {
+        const search = req.query.search;
+        let condition = {};
+        if (search) {
+            condition = {
+                name: {
+                    [sequelize_1.Op.like]: `%${search}%`
+                }
+            };
+        }
+        const items = await Item.findAll({ where: condition });
+        return res.status(200).json(items);
+    }
+    catch (error) {
+        console.error("Erreur findAll items:", error);
+        return res.status(500).json({
+            message: "Erreur lors de la récupération des items."
+        });
+    }
+};
+exports.findAll = findAll;
+const findOne = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const item = await Item.findByPk(id);
+        if (!item) {
+            return res.status(404).json({ message: `Item avec id=${id} non trouvé.` });
+        }
+        return res.status(200).json(item);
+    }
+    catch (error) {
+        console.error("Erreur findOne item:", error);
+        return res.status(500).json({
+            message: "Erreur lors de la récupération de l'item."
+        });
+    }
+};
+exports.findOne = findOne;
+const update = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const [nbUpdated] = await Item.update(req.body, {
+            where: { id: id }
+        });
+        if (nbUpdated === 0) {
+            return res.status(404).json({
+                message: `Item avec id=${id} non trouvé ou aucune modification.`
+            });
+        }
+        const updatedItem = await Item.findByPk(id);
+        return res.status(200).json(updatedItem);
+    }
+    catch (error) {
+        console.error("Erreur update item:", error);
+        return res.status(500).json({
+            message: "Erreur lors de la mise à jour de l'item."
+        });
+    }
+};
+exports.update = update;
+const remove = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const nbDeleted = await Item.destroy({
+            where: { id: id }
+        });
+        if (nbDeleted === 0) {
+            return res.status(404).json({ message: `Item avec id=${id} non trouvé.` });
+        }
+        return res.status(200).json({ message: "Item supprimé avec succès." });
+    }
+    catch (error) {
+        console.error("Erreur delete item:", error);
+        return res.status(500).json({
+            message: "Erreur lors de la suppression de l'item."
+        });
+    }
+};
+exports.remove = remove;
+//# sourceMappingURL=item.controller.js.map
