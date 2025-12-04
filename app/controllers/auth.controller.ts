@@ -131,11 +131,22 @@ export class AuthController {
         expiresIn: JWT_EXPIRES_IN
       } as SignOptions);
 
-      // Réponse avec is_admin
+      // Définir le cookie HttpOnly
+      const cookieOptions = {
+        httpOnly: true,        // Empêche l'accès JavaScript
+        secure: process.env.NODE_ENV === 'production', // HTTPS en production
+        sameSite: 'strict' as const, // Protection CSRF
+        maxAge: 24 * 60 * 60 * 1000, // 24 heures en millisecondes
+        path: '/'              // Disponible sur tout le site
+      };
+
+      // Définir le cookie
+      res.cookie('authToken', token, cookieOptions);
+
+      // Réponse SANS le token dans le body (sécurité)
       return res.json({
         success: true,
         message: isAdmin ? 'Connexion administrateur réussie' : 'Connexion réussie',
-        token,
         user: {
           id: user.id,
           email: user.email,
@@ -189,6 +200,30 @@ export class AuthController {
       return res.status(500).json({
         success: false,
         message: 'Erreur serveur'
+      });
+    }
+  }
+
+  // Déconnexion
+  static async logout(req: Request, res: Response): Promise<Response> {
+    try {
+      // Supprimer le cookie
+      res.clearCookie('authToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/'
+      });
+
+      return res.json({
+        success: true,
+        message: 'Déconnexion réussie'
+      });
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la déconnexion'
       });
     }
   }

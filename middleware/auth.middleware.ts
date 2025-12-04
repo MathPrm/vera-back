@@ -11,8 +11,13 @@ interface AuthRequest extends Request {
 }
 
 export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction): Response | void => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  // Essayer de récupérer le token depuis le header Authorization (pour compatibilité)
+  let token = req.headers['authorization']?.split(' ')[1];
+  
+  // Si pas de token dans le header, essayer depuis le cookie
+  if (!token && req.cookies && req.cookies.authToken) {
+    token = req.cookies.authToken;
+  }
 
   if (!token) {
     return res.status(401).json({

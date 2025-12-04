@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import express, { Application, Request, Response, NextFunction } from "express";
 import cors, { CorsOptions } from "cors";
+import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import multer from "multer";
@@ -94,6 +95,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
