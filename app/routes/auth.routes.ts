@@ -13,3 +13,4 @@ router.get('/profile', verifyToken, AuthController.getProfile);
 
 export default router;
 
+
