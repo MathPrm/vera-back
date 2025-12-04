@@ -22,6 +22,7 @@ interface VeraResult {
   status?: string;
   sources?: any[];
   confidence?: number;
+  explanation?: string;
 }
 
 interface MulterFile {
