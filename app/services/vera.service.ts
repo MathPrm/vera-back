@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import tiktokService from './tiktok.service';
 import youtubeService from './youtube.service';
 import instagramService from './instagram.service';
-import embeddingService from './embedding.service';
+//import embeddingService from './embedding.service';
 import vectorStoreService from './vector-store.service';
 
 interface VeraResult {
@@ -188,6 +188,9 @@ Réponds avec un verdict: VERIFIED, MOSTLY_TRUE, MIXED, MOSTLY_FALSE, ou FALSE`;
     const response = veraData.response || veraData.answer || veraData.message || veraData || '';
     const analysisText = typeof response === 'string' ? response : JSON.stringify(response);
     
+    // LOG pour debug
+    console.log('📥 Réponse Vera (300 premiers caractères):', analysisText.substring(0, 300));
+    
     let score = 70;
     let verdict = 'MIXED';
     const flags: Array<{ type: string; message: string }> = [];
@@ -216,7 +219,9 @@ Réponds avec un verdict: VERIFIED, MOSTLY_TRUE, MIXED, MOSTLY_FALSE, ou FALSE`;
       verdict = 'VERIFIED';
       summary = 'Contenu vérifié et authentique';
     } else {
-      summary = 'Analyse en cours - résultat non concluant';
+      // Si aucun mot-clé détecté, utiliser la réponse de Vera directement
+      summary = analysisText.length > 500 ? analysisText.substring(0, 497) + '...' : analysisText;
+      console.log('⚠️  Aucun mot-clé spécifique détecté, utilisation de la réponse brute');
     }
     
     const toolsUsed: string[] = [];
