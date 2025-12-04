@@ -147,12 +147,15 @@ export class AuthController {
       });
 
       // Définir le cookie HttpOnly
+      // En production, utiliser 'none' pour sameSite si les domaines sont différents
+      const isProduction = process.env.NODE_ENV === 'production';
       const cookieOptions = {
         httpOnly: true,        // Empêche l'accès JavaScript
-        secure: process.env.NODE_ENV === 'production', // HTTPS en production
-        sameSite: 'strict' as const, // Protection CSRF
+        secure: isProduction,  // HTTPS en production
+        sameSite: (isProduction ? 'none' : 'strict') as 'none' | 'strict' | 'lax', // 'none' pour cross-site en production
         maxAge: 24 * 60 * 60 * 1000, // 24 heures en millisecondes
-        path: '/'              // Disponible sur tout le site
+        path: '/',             // Disponible sur tout le site
+        // Ne pas définir domain pour permettre le cross-domain
       };
 
       // Définir le cookie
@@ -234,10 +237,11 @@ export class AuthController {
       }
 
       // Supprimer le cookie
+      const isProduction = process.env.NODE_ENV === 'production';
       res.clearCookie('authToken', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: (isProduction ? 'none' : 'strict') as 'none' | 'strict' | 'lax',
         path: '/'
       });
 
