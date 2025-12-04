@@ -286,7 +286,7 @@ Réponds avec un verdict: VERIFIED, MOSTLY_TRUE, MIXED, MOSTLY_FALSE, ou FALSE`;
     }
     else {
       // Utiliser la réponse de Vera directement
-      summary = analysisText.length > 500 ? analysisText.substring(0, 497) + '...' : analysisText;
+      summary = analysisText;
       console.log('⚠️  Aucun mot-clé spécifique détecté, utilisation de la réponse brute');
     }
     

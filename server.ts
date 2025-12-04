@@ -219,10 +219,11 @@ app.post('/api/chat', conditionalUpload, async (req: Request, res: Response) => 
     }
 
     const response = {
-      response: result.summary || result.response || result.message || 'Réponse générée',
+      response: result.explanation || result.summary || result.response || result.message || 'Réponse générée',
       result: {
         status: result.status || 'approved',
         summary: result.summary || '',
+        explanation: result.explanation || result.summary || '',
         sources: result.sources || [],
         confidence: result.confidence || 0
       }
