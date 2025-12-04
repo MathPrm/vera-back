@@ -59,11 +59,11 @@ const corsOptions: CorsOptions = {
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`[CORS] Origine non autorisée: ${origin}`);
-      callback(null, true); // En développement, accepter quand même
+      console.warn(`[CORS] Origine non autorisée mais acceptée: ${origin}`);
+      callback(null, true); // Accepter pour permettre les cookies cross-origin
     }
   },
-  credentials: true,
+  credentials: true, // CRUCIAL pour les cookies
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Cookie'],
   exposedHeaders: ['Set-Cookie'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -102,6 +102,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// IMPORTANT: cookieParser doit être APRÈS express.json() mais AVANT les routes
 app.use(cookieParser());
 
 const uploadsDir = path.join(__dirname, 'uploads');
