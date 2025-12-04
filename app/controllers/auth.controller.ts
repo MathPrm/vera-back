@@ -131,6 +131,21 @@ export class AuthController {
         expiresIn: JWT_EXPIRES_IN
       } as SignOptions);
 
+      // Calculer la date d'expiration (24h)
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+
+      // Sauvegarder la session en base de données
+      const Session = db.Session;
+      await Session.create({
+        user_id: user.id,
+        token: token,
+        ip_address: req.ip || (req.headers['x-forwarded-for'] as string) || undefined,
+        user_agent: req.headers['user-agent'],
+        expires_at: expiresAt,
+        is_active: true
+      });
+
       // Définir le cookie HttpOnly
       const cookieOptions = {
         httpOnly: true,        // Empêche l'accès JavaScript
@@ -207,6 +222,17 @@ export class AuthController {
   // Déconnexion
   static async logout(req: Request, res: Response): Promise<Response> {
     try {
+      const token = req.cookies?.authToken || req.headers['authorization']?.split(' ')[1];
+      
+      // Désactiver la session en base de données
+      if (token) {
+        const Session = db.Session;
+        await Session.update(
+          { is_active: false },
+          { where: { token, is_active: true } }
+        );
+      }
+
       // Supprimer le cookie
       res.clearCookie('authToken', {
         httpOnly: true,
