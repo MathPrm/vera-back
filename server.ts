@@ -64,7 +64,8 @@ const corsOptions: CorsOptions = {
     }
   },
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Cookie'],
+  exposedHeaders: ['Set-Cookie'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   preflightContinue: false,
   optionsSuccessStatus: 204
@@ -84,9 +85,15 @@ app.use(cors(corsOptions));
 // Middleware manuel pour gérer les requêtes OPTIONS (fallback)
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    const origin = req.headers.origin;
+    if (origin && (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production')) {
+      res.header('Access-Control-Allow-Origin', origin);
+    } else {
+      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    }
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Cookie');
+    res.header('Access-Control-Expose-Headers', 'Set-Cookie');
     res.header('Access-Control-Allow-Credentials', 'true');
     return res.status(204).send();
   }
