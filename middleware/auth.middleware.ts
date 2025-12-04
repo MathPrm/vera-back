@@ -14,12 +14,19 @@ interface AuthRequest extends Request {
 }
 
 export const verifyToken = async (req: AuthRequest, res: Response, next: NextFunction): Promise<Response | void> => {
+  // Debug: Log des cookies reçus
+  console.log('[AUTH] Cookies reçus:', req.cookies);
+  console.log('[AUTH] Headers authorization:', req.headers['authorization']);
+  
   // Essayer de récupérer le token depuis le header Authorization (pour compatibilité)
   let token = req.headers['authorization']?.split(' ')[1];
   
   // Si pas de token dans le header, essayer depuis le cookie
   if (!token && req.cookies && req.cookies.authToken) {
     token = req.cookies.authToken;
+    console.log('[AUTH] Token trouvé dans le cookie');
+  } else if (!token) {
+    console.log('[AUTH] Aucun token trouvé ni dans header ni dans cookie');
   }
 
   if (!token) {

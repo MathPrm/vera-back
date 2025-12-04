@@ -149,10 +149,13 @@ export class AuthController {
       // Définir le cookie HttpOnly
       // En production, utiliser 'none' pour sameSite si les domaines sont différents
       const isProduction = process.env.NODE_ENV === 'production';
-      const cookieOptions = {
+      const origin = req.headers.origin || '';
+      const isCrossOrigin = isProduction && origin && !origin.includes('vera-back.onrender.com');
+      
+      const cookieOptions: any = {
         httpOnly: true,        // Empêche l'accès JavaScript
-        secure: isProduction,  // HTTPS en production
-        sameSite: (isProduction ? 'none' : 'strict') as 'none' | 'strict' | 'lax', // 'none' pour cross-site en production
+        secure: isProduction,  // HTTPS en production (OBLIGATOIRE avec sameSite: 'none')
+        sameSite: (isProduction && isCrossOrigin ? 'none' : 'lax') as 'none' | 'strict' | 'lax',
         maxAge: 24 * 60 * 60 * 1000, // 24 heures en millisecondes
         path: '/',             // Disponible sur tout le site
         // Ne pas définir domain pour permettre le cross-domain
@@ -160,11 +163,25 @@ export class AuthController {
 
       // Définir le cookie
       res.cookie('authToken', token, cookieOptions);
+      
+      // Debug: Log de la configuration du cookie
+      console.log('[AUTH] Cookie défini avec options:', {
+        httpOnly: cookieOptions.httpOnly,
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        path: cookieOptions.path,
+        maxAge: cookieOptions.maxAge,
+        origin: origin,
+        isCrossOrigin: isCrossOrigin
+      });
+      console.log('[AUTH] Set-Cookie header sera:', `authToken=${token}; HttpOnly; Secure=${cookieOptions.secure}; SameSite=${cookieOptions.sameSite}; Path=/; Max-Age=86400`);
 
-      // Réponse SANS le token dans le body (sécurité)
+      // TEMPORAIRE: Envoyer aussi le token dans la réponse pour debug
+      // TODO: Retirer après vérification que le cookie fonctionne
       return res.json({
         success: true,
         message: isAdmin ? 'Connexion administrateur réussie' : 'Connexion réussie',
+        token: token, // TEMPORAIRE - pour debug
         user: {
           id: user.id,
           email: user.email,
